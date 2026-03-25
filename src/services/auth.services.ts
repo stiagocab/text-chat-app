@@ -1,40 +1,49 @@
 import { supabase } from "clients";
-import { singupWithEmailAndPassword } from "../controllers/auth.controller";
+
+import auth from "clients/firebase.client";
 
 export const signinService = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    }
+  );
 
-  if (error) throw new Error(error.message);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error?.message ?? "Sign in failed");
+  }
 
   return {
-    id: data.user?.id,
-    email: data.user?.email,
-    accessToken: data.session?.access_token,
-    refreshToken: data.session?.refresh_token,
+    id: data.localId,
+    email: data.email,
+    accessToken: data.idToken,
+    refreshToken: data.refreshToken,
   };
 };
 
 export const singupService = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
+  return auth.createUser({
+    email, password
+  }).then(resp => {
+    return {
+      id: resp.uid,
+      email: resp.email,
+    };
+  }).catch((error: Error) => {
+    throw new Error(error.message);
   });
-
-  if (error) throw new Error(error.message);
-
-  return {
-    id: data.user?.id,
-    email: data.user?.email,
-    accessToken: data.session?.access_token,
-    refreshToken: data.session?.refresh_token,
-  };
 };
 
 export const refreshTokenService = async (refreshToken: string) => {
-  if (!refreshToken) {
+  return auth.
+
+
+  /* if (!refreshToken) {
     throw new Error("Refresh token required");
   }
 
@@ -53,14 +62,13 @@ export const refreshTokenService = async (refreshToken: string) => {
     },
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
-  };
+  }; */
 };
 
 export const signoutService = async (accessToken: string) => {
- 
   if (!accessToken) {
     throw new Error("Session active required");
   }
 
-  return true
-}
+  return true;
+};
